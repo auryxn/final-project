@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Header from './components/Header';
 import Statistics from './components/Statistics';
+import { TrafficService } from './services/trafficService';
 import { Line, Bar } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -12,6 +13,7 @@ import {
   Title,
   Tooltip,
   Legend,
+  Filler
 } from 'chart.js';
 
 ChartJS.register(
@@ -22,75 +24,96 @@ ChartJS.register(
   BarElement,
   Title,
   Tooltip,
-  Legend
+  Legend,
+  Filler
 );
 
 const App = () => {
-  const lineData = {
-    labels: ['00:00', '04:00', '08:00', '12:00', '16:00', '20:00', '23:59'],
-    datasets: [
-      {
-        label: 'Eco Impact Score',
-        data: [85, 82, 65, 60, 55, 70, 88],
-        borderColor: '#10b981',
-        backgroundColor: 'rgba(16, 185, 129, 0.1)',
-        fill: true,
-        tension: 0.4
-      }
-    ]
-  };
+  const [metrics, setMetrics] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const barData = {
-    labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+  useEffect(() => {
+    const fetchData = async () => {
+      const data = await TrafficService.getLatestMetrics();
+      setMetrics(data);
+      setLoading(false);
+    };
+    fetchData();
+    const interval = setInterval(fetchData, 30000); // Update every 30s
+    return () => clearInterval(interval);
+  }, []);
+
+  const chartData = {
+    labels: metrics.length > 0 ? metrics.map(m => new Date(m.timestamp).getHours() + ':00') : ['00:00', '04:00', '08:00', '12:00', '16:00', '20:00'],
     datasets: [
       {
-        label: 'Peak Congestion Index',
-        data: [12, 19, 15, 8, 2, 3, 7],
-        backgroundColor: '#3b82f6',
+        fill: true,
+        label: 'Real-time Traffic Volume',
+        data: metrics.length > 0 ? metrics.map(m => m.volume) : [3000, 4500, 6000, 5500, 7000, 4000],
+        borderColor: '#38bdf8',
+        backgroundColor: 'rgba(56, 189, 248, 0.1)',
+        tension: 0.4,
       }
     ]
   };
 
   return (
-    <div className="bg-gray-900 min-h-screen text-gray-200 font-sans">
+    <div className="bg-slate-900 min-h-screen text-slate-200 font-sans selection:bg-sky-500/30">
       <Header />
-      <main className="max-w-[1600px] mx-auto">
-        <Statistics />
-        
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 p-6">
-          {/* Charts Section */}
-          <div className="bg-gray-800 p-8 rounded-3xl border border-gray-700 shadow-2xl">
-            <h2 className="text-xl font-semibold mb-6 flex items-center gap-2 text-white">
-              <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
-              Environmental Trend Analysis
-            </h2>
-            <div className="h-[400px]">
-              <Line data={lineData} options={{ maintainAspectRatio: false }} />
-            </div>
-          </div>
-
-          <div className="bg-gray-800 p-8 rounded-3xl border border-gray-700 shadow-2xl">
-            <h2 className="text-xl font-semibold mb-6 flex items-center gap-2 text-white">
-              <span className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></span>
-              Weekly Traffic Congestion
-            </h2>
-            <div className="h-[400px]">
-              <Bar data={barData} options={{ maintainAspectRatio: false }} />
-            </div>
-          </div>
+      
+      <main className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
+        <div className="mb-8">
+          <h2 className="text-white text-xl font-bold tracking-tight">System Overview</h2>
+          <p className="text-slate-400 text-sm">Real-time telemetry from urban sensor network</p>
         </div>
 
-        {/* Map Placeholder */}
-        <div className="p-6">
-          <div className="bg-gray-800 h-96 rounded-3xl border border-gray-700 flex flex-col items-center justify-center relative overflow-hidden group">
-             <div className="absolute inset-0 bg-[url('https://www.mapcustomizer.com/img/map-placeholder.png')] opacity-20 group-hover:scale-105 transition-transform duration-1000"></div>
-             <p className="text-gray-400 font-mono text-lg z-10">GIS ENGINE INITIALIZING...</p>
-             <div className="w-64 h-1 bg-gray-700 mt-4 rounded-full overflow-hidden z-10">
-               <div className="bg-blue-500 h-full w-1/2 animate-shimmer"></div>
-             </div>
+        <Statistics />
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-8">
+          {/* Main Chart */}
+          <div className="lg:col-span-2 bg-slate-800/50 backdrop-blur-xl p-8 rounded-3xl border border-slate-700/50 shadow-xl">
+            <div className="flex justify-between items-center mb-8">
+              <h3 className="text-lg font-semibold text-white">Traffic Dynamics</h3>
+              <div className="flex gap-2">
+                <span className="px-3 py-1 bg-sky-500/10 text-sky-400 text-xs font-medium rounded-full border border-sky-500/20">LIVE</span>
+              </div>
+            </div>
+            <div className="h-[350px]">
+              <Line data={chartData} options={{ 
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                  y: { grid: { color: 'rgba(255,255,255,0.05)' } },
+                  x: { grid: { display: false } }
+                }
+              }} />
+            </div>
+          </div>
+
+          {/* Side Info */}
+          <div className="bg-slate-800/50 backdrop-blur-xl p-8 rounded-3xl border border-slate-700/50 shadow-xl">
+            <h3 className="text-lg font-semibold text-white mb-6">Environment AI</h3>
+            <div className="space-y-6">
+              <div className="p-4 bg-slate-900/50 rounded-2xl border border-slate-700/30">
+                <p className="text-xs text-slate-500 uppercase font-bold mb-1">Pollution Forecast</p>
+                <p className="text-2xl font-bold text-emerald-400 italic">Moderate</p>
+                <div className="mt-2 h-1.5 w-full bg-slate-700 rounded-full overflow-hidden">
+                  <div className="h-full bg-emerald-500 w-1/3 animate-pulse"></div>
+                </div>
+              </div>
+              <div className="p-4 bg-slate-900/50 rounded-2xl border border-slate-700/30">
+                <p className="text-xs text-slate-500 uppercase font-bold mb-1">ML Model Status</p>
+                <p className="text-2xl font-bold text-sky-400 italic">Active</p>
+                <p className="text-[10px] text-slate-500 mt-1">Version: v2.4.0-eco</p>
+              </div>
+            </div>
           </div>
         </div>
       </main>
+
+      <footer className="py-10 text-center border-t border-slate-800 mt-10">
+        <p className="text-slate-500 text-sm">SmartCity Eco-Traffic Monitor • Enterprise Edition 2026</p>
+      </footer>
     </div>
   );
 };
