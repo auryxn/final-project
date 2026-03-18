@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+  postgres-db:
+    image: postgres:16
+    container_name: smartcity-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: smartcity_dwh
+      POSTGRES_USER: sir_admin
+      POSTGRES_PASSWORD: enterprise_pass
+
+  mongo-db:
+    image: mongo:latest
+    container_name: smartcity-mongo
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_DATABASE: smartcity_raw
+
+  redis-cache:
+    image: redis:alpine
+    container_name: smartcity-redis
+    ports:
+      - "6379:6379"
